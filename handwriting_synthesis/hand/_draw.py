@@ -4,7 +4,7 @@ import svgwrite
 from handwriting_synthesis import drawing
 
 
-def _draw(strokes, lines, filename, stroke_colors=None, stroke_widths=None):
+def _draw(strokes, lines, filename, stroke_colors=None, stroke_widths=None, left_justify=False):
     stroke_colors = stroke_colors or ['black'] * len(lines)
     stroke_widths = stroke_widths or [2] * len(lines)
 
@@ -31,6 +31,10 @@ def _draw(strokes, lines, filename, stroke_colors=None, stroke_widths=None):
         strokes[:, 1] *= -1
         strokes[:, :2] -= strokes[:, :2].min() + initial_coord
         strokes[:, 0] += (view_width - strokes[:, 0].max()) / 2
+
+        # Apply left justification adjustment
+        if not left_justify:
+            strokes[:, 0] += (view_width - strokes[:, 0].max()) / 2
 
         prev_eos = 1.0
         p = "M{},{} ".format(0, 0)
