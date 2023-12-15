@@ -32,25 +32,43 @@ def remove_initial_m0(svg_path):
 
 
 def markdown_to_text(md_content):
-    """Convert Markdown content to plain text."""
-    html = markdown.markdown(md_content)
-    soup = BeautifulSoup(html, features="html.parser")
-    return soup.get_text("\n", strip=True)
+    lines = md_content.split('\n')
+    text = []
+    bold_lines = []
+
+    for line in lines:
+        # Convert each line from Markdown to HTML
+        html_line = markdown.markdown(line)
+        soup = BeautifulSoup(html_line, features="html.parser")
+
+        # Extract text and determine if it's bold
+        is_bold = bool(soup.find('strong'))
+        line_text = soup.get_text(strip=True)
+
+        # Append results to lists
+        bold_lines.append(is_bold)
+        text.append(line_text)
+
+    return '\n'.join(text), bold_lines
 
 
-def write_handwriting_from_markdown(md_content, filename, biases, styles, left_justify):
+
+
+
+def write_handwriting_from_markdown(md_content, filename, biases, styles, left_justify, stroke_color):
     """Generate handwriting from Markdown content."""
-    text = markdown_to_text(md_content)
+    text, bold_lines = markdown_to_text(md_content)
     lines = text.split('\n')
+    stroke_widths = [2 if is_bold else 1 for is_bold in bold_lines]
 
     # Ensure biases and styles lists are the same length as lines
     # If not, repeat or truncate the biases and styles to match the number of lines
     biases = (biases * len(lines))[:len(lines)]
     styles = (styles * len(lines))[:len(lines)]
 
-    stroke_colors = ['black' for _ in lines]  # Fixed color as black
-    stroke_widths = [1 for _ in lines]        # Fixed width as 1
-
+    stroke_colors = [stroke_color for _ in lines]  # Fixed color as black
+    #stroke_widths = [1 for _ in lines]        # Fixed width as 1
+    print(left_justify)
     hand = Hand()
     hand.write(
         filename=filename,
@@ -86,9 +104,11 @@ def index():
     image_file = None
     if request.method == 'POST':
         md_content = request.form['md_text']
-        left_justify = 'left_justify' in request.form
-        biases = [float(request.form.get('bias', 0.75))]
-        styles = [int(request.form.get('style', 22))]
+        left_justify = request.form.get('justify', 'left')
+        stroke_color = request.form.get('stroke_color', 'black')
+
+        biases = [float(request.form.get('bias', 0.95))]
+        styles = [int(request.form.get('style', 16))]
 
         # Repeat the bias and style for each line
         lines = md_content.split('\n')
@@ -96,7 +116,7 @@ def index():
         styles *= len(lines)
 
         output_file = 'static/handwriting_output.svg'
-        write_handwriting_from_markdown(md_content, output_file, biases, styles, left_justify)
+        write_handwriting_from_markdown(md_content, output_file, biases, styles, left_justify, stroke_color)
 
         timestamp = int(time.time())
         image_file = url_for('static', filename='handwriting_output.svg') + f'?v={timestamp}'

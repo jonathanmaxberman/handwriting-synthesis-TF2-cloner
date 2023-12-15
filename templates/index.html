@@ -20,7 +20,7 @@ Directions:
 <br>
 If you would like to imitate your own handwriting, draw a few words, type those same words in the "priming sequence" box, and press "capture signature."
 <br>
-This will be temporarily saved as style 15.
+This will be temporarily saved as style 16.
 <br>
 Otherwise, type the lines your would like written in the box below and select the bias and style.
 <br> Bias is a number between 0 and 1 that determines how close to the most probable strokes the model generates.
@@ -39,13 +39,21 @@ Otherwise, type the lines your would like written in the box below and select th
     <br>
     Bias: <input type="number" name="bias" step="0.01" value="0.95">
     <br>
-    Style: <input type="number" name="style" value="32">
+    Style: <input type="number" name="style" value="16">
     <br>
-    <label>
-        <input type="checkbox" name="left_justify" checked>
-        Left Justify
-    </label>
+<!-- Justification Options -->
+<label><input type="radio" name="justify" value="left" checked> Left Justify</label>
+<label><input type="radio" name="justify" value="center"> Center</label>
+<label><input type="radio" name="justify" value="right"> Right Justify</label>
+<br>
     <br>
+    <!-- Stroke Color Options -->
+<label><input type="radio" name="stroke_color" value="black" checked> Black</label>
+<label><input type="radio" name="stroke_color" value="blue"> Blue</label>
+<label><input type="radio" name="stroke_color" value="red"> Red</label>
+<label><input type="radio" name="stroke_color" value="green"> Green</label>
+<br>
+
     <input type="submit" value="Generate Handwriting">
 </form>
 {% if image_file %}

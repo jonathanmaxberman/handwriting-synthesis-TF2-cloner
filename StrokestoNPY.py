@@ -38,7 +38,7 @@ def handle_draw_data(data, priming_sequence):
     # Convert back to float32 and save the normalized strokes data as a .npy file
     normalized_strokes = normalized_strokes.astype(np.float32)
     print("Shape of the strokes array:", normalized_strokes.shape)
-    np.save('/model/style/style-16-strokes.npy', normalized_strokes)
+    np.save('./model/style/style-16-strokes.npy', normalized_strokes)
     np.save('style-16-strokes.npy', normalized_strokes)
     print("Processed strokes data saved.")
 
