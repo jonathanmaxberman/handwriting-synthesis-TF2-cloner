@@ -11,6 +11,8 @@ from handwriting_synthesis.rnn import RNN
 
 class Hand(object):
     def __init__(self):
+        print("Handy")
+        print("stillhandy")
         os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
         self.nn = RNN(
             log_dir='logs',
@@ -36,8 +38,10 @@ class Hand(object):
             attention_mixture_components=10
         )
         self.nn.restore()
+        print("handy")
 
     def write(self, filename, lines, biases=None, styles=None, stroke_colors=None, stroke_widths=None, left_justify=None):
+        print(filename)
         valid_char_set = set(drawing.alphabet)
         for line_num, line in enumerate(lines):
             if len(line) > 75:
@@ -56,31 +60,39 @@ class Hand(object):
                             "Valid character set is {}"
                         ).format(char, line_num, valid_char_set)
                     )
-
+        print(self._sample(lines, biases=biases, styles=styles))
         strokes = self._sample(lines, biases=biases, styles=styles)
+        print(strokes)
         _draw(strokes, lines, filename, stroke_colors=stroke_colors, stroke_widths=stroke_widths, left_justify=left_justify)
 
     def _sample(self, lines, biases=None, styles=None):
         num_samples = len(lines)
         max_tsteps = 40 * max([len(i) for i in lines])
         biases = biases if biases is not None else [0.5] * num_samples
-
+        print(biases, styles, {style_path})
         x_prime = np.zeros([num_samples, 1200, 3])
+        print(x_prime)
         x_prime_len = np.zeros([num_samples])
+        print(x_prime_len)
         chars = np.zeros([num_samples, 120])
+        print(chars)
         chars_len = np.zeros([num_samples])
-
+        print(f"./model/style/style-{styles}-strokes.npy")
+        print (chars_len)
         if styles is not None:
             for i, (cs, style) in enumerate(zip(lines, styles)):
-                x_p = np.load(f"{style_path}/style-{style}-strokes.npy")
-                c_p = np.load(f"{style_path}/style-{style}-chars.npy").tostring().decode('utf-8')
-
+                x_p = np.load(f"./model/style/style-{style}-strokes.npy")
+                c_p = np.load(f"./model/style/style-{style}-chars.npy").tostring().decode('utf-8')
+                print(c_p)
                 c_p = str(c_p) + " " + cs
                 c_p = drawing.encode_ascii(c_p)
                 c_p = np.array(c_p)
-
+                print(c_p)
                 x_prime[i, :len(x_p), :] = x_p
+                #np.set_printoptions(threshold=np.inf)
+                print(x_prime)
                 x_prime_len[i] = len(x_p)
+                print(x_prime_len)
                 chars[i, :len(c_p)] = c_p
                 chars_len[i] = len(c_p)
 

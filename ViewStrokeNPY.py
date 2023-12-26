@@ -12,7 +12,7 @@ def plot_stroke(stroke, save_name=None):
 
     x = np.cumsum(stroke[:, 0])
     y = np.cumsum(stroke[:, 1])
-
+    #print(x,y)
     size_x = x.max() - x.min() + 1.0
     size_y = y.max() - y.min() + 1.0
 
@@ -22,6 +22,7 @@ def plot_stroke(stroke, save_name=None):
     start = 0
 
     for cut_value in cuts:
+        print(cut_value)
         ax.plot(x[start:cut_value], y[start:cut_value], "k-", linewidth=3)
         start = cut_value + 1
 
@@ -39,6 +40,8 @@ def plot_stroke(stroke, save_name=None):
 
     pyplot.close()
 
-file_path = 'style-16-strokes.npy'
+file_path = ('./model/style/style-21-strokes.npy')
 stroke_data = np.load(file_path, allow_pickle=True)
+print(stroke_data, f'Size:{stroke_data.shape}')
+print(type(stroke_data))
 plot_stroke(stroke_data)

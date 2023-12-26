@@ -2,12 +2,14 @@
 #from io import RawIOBase
 import numpy as np
 #import drawing
-import json
+#import json
 from handwriting_synthesis.drawing.operations import align, denoise, coords_to_offsets, normalize
 from ViewStrokeNPY import plot_stroke
-def handle_draw_data(data, priming_sequence):
+
+def handle_draw_data(data, priming_sequence, path, name):
     # Decode the JSON data
     #draw_data = json.loads(data)
+    print(data)
     print("Hello!")
     all_strokes = []
     for stroke_data in data:
@@ -25,7 +27,10 @@ def handle_draw_data(data, priming_sequence):
         all_strokes.extend(stroke.tolist())
 
     strokes = np.array(all_strokes, dtype=np.float32)
-    print(strokes)
+
+
+
+    #print(strokes)
     canvas_height = 200
     strokes[:, 1] = canvas_height - strokes[:, 1]
 
@@ -37,19 +42,23 @@ def handle_draw_data(data, priming_sequence):
 
     # Convert back to float32 and save the normalized strokes data as a .npy file
     normalized_strokes = normalized_strokes.astype(np.float32)
+    plot_stroke(normalized_strokes)
+
     print("Shape of the strokes array:", normalized_strokes.shape)
-    np.save('./model/style/style-16-strokes.npy', normalized_strokes)
-    np.save('style-16-strokes.npy', normalized_strokes)
+    normalized_strokes = normalized_strokes[:-1]
+    print("Poppedshape:", normalized_strokes.shape)
+    #np.save('./model/style/style-16-strokes.npy', normalized_strokes)
+    np.save(f'{path}{name}strokes.npy', normalized_strokes)
     print("Processed strokes data saved.")
 
     # Handle the priming sequence
     #print(text.value.encode('utf-8'))
     priming_sequence_bytes = priming_sequence.encode('utf-8')
-    np.save('./model/style/style-16-chars.npy', priming_sequence_bytes)
+    np.save(f'{path}{name}chars.npy', priming_sequence_bytes)
     print("Priming sequence saved.")
 
     #view the plot
-    plot_stroke(normalized_strokes)
+    #plot_stroke(normalized_strokes)
     # Download the files
     #files.download('style-14-strokes.npy')
     #files.download('style-14-chars.npy')

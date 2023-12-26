@@ -19,7 +19,7 @@ def prepare():
     c = np.zeros([len(stroke_fnames), drawing.MAX_CHAR_LEN], dtype=np.int8)
     c_len = np.zeros([len(stroke_fnames)], dtype=np.int8)
     w_id = np.zeros([len(stroke_fnames)], dtype=np.int16)
-    valid_mask = np.zeros([len(stroke_fnames)], dtype=np.bool)
+    valid_mask = np.zeros([len(stroke_fnames)], dtype=np.bool_)
 
     for i, (stroke_fname, c_i, w_id_i) in enumerate(zip(stroke_fnames, transcriptions, writer_ids)):
         if i % 200 == 0:

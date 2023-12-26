@@ -57,19 +57,22 @@ def markdown_to_text(md_content):
 
 def write_handwriting_from_markdown(md_content, filename, biases, styles, left_justify, stroke_color):
     """Generate handwriting from Markdown content."""
+    print(styles)
     text, bold_lines = markdown_to_text(md_content)
     lines = text.split('\n')
     stroke_widths = [2 if is_bold else 1 for is_bold in bold_lines]
-
+    print(text)
     # Ensure biases and styles lists are the same length as lines
     # If not, repeat or truncate the biases and styles to match the number of lines
     biases = (biases * len(lines))[:len(lines)]
     styles = (styles * len(lines))[:len(lines)]
-
+    print(biases,styles)
     stroke_colors = [stroke_color for _ in lines]  # Fixed color as black
+    print(filename, lines, biases, styles, stroke_colors, stroke_widths, left_justify)
     #stroke_widths = [1 for _ in lines]        # Fixed width as 1
-    print(left_justify)
+    #print(left_justify)
     hand = Hand()
+    print(filename, lines, biases, styles, stroke_colors, stroke_widths, left_justify)
     hand.write(
         filename=filename,
         lines=lines,
@@ -90,7 +93,7 @@ def capture_strokes():
         priming_sequence = data['priming_sequence']
         print("strokes:", strokes)
         print("Priming Sequence:", priming_sequence)
-        handle_draw_data(strokes, priming_sequence)
+        handle_draw_data(strokes, priming_sequence, "./model/style/","style-16-")
         return jsonify({'status': 'success'})
 
 
@@ -116,8 +119,9 @@ def index():
         styles *= len(lines)
 
         output_file = 'static/handwriting_output.svg'
+        print("writing")
         write_handwriting_from_markdown(md_content, output_file, biases, styles, left_justify, stroke_color)
-
+        print ("wrote")
         timestamp = int(time.time())
         image_file = url_for('static', filename='handwriting_output.svg') + f'?v={timestamp}'
 

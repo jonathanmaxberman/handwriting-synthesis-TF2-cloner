@@ -12,7 +12,16 @@ from scipy.interpolate import CubicSpline
 #image_path = "./Data/a01/a01-000x/a01-000x-00.png"
 
 # Function to approximate a cubic spline with line segments
-def approximate_cubic_spline_with_lines(control_points, num_segments):
+def approximate_cubic_spline_with_dynamic_reduction(control_points, total_points, target_points):
+    if len(control_points) < 2 or total_points <= target_points:
+        return control_points  # No reduction possible or not needed
+
+    # Calculate dynamic reduction factor
+    reduction_factor = 2*max(1, int(total_points / target_points))
+
+    # Reduce the number of segments based on the dynamic reduction factor
+    num_segments = max(1, len(control_points) // reduction_factor)
+
     t_values = np.linspace(0, len(control_points) - 1, len(control_points))
     xs, ys = zip(*control_points)
 
@@ -27,6 +36,7 @@ def approximate_cubic_spline_with_lines(control_points, num_segments):
 
     return list(zip(x_samples, y_samples))
 
+
 # Function to extract control points from a spline
 def extract_control_points(spline):
     return [(point.x, point.y) for point in spline.points]
@@ -38,10 +48,10 @@ def tracetovector(image_path=None, input_string=None, path_to_npy=None, name=Non
     grey_image = image.convert('L')
 
     # Convert to bitmap (binary image: 0 or 255)
-    threshold = 155
+    threshold = 150
     bitmap_image = grey_image.point(lambda x: 255 if x > threshold else 0, mode='1')
     rgb_bitmap = bitmap_image.convert('RGB') #
-    # rgb_bitmap.show()
+    rgb_bitmap.show()
     # Convert to NumPy array
     image_array = np.array(rgb_bitmap)
     #print(image_array.shape)
@@ -49,8 +59,8 @@ def tracetovector(image_path=None, input_string=None, path_to_npy=None, name=Non
 
     # Use autotrace to trace the bitmap
     bitmap = Bitmap(image_array)
-    vector = bitmap.trace(    filter_iterations=4, # This might need adjustment
-        error_threshold=0.01, # Set according to your Inkscape settings
+    vector = bitmap.trace(    filter_iterations=2, # This might need adjustment
+        error_threshold=1.5, # Set according to your Inkscape settings
         despeckle_level=2,   # Set according to your Inkscape settings
         line_reversion_threshold=0.01, # Default value, adjust as needed
         line_threshold=1.0,  # Default value, adjust as needed
@@ -70,7 +80,7 @@ def tracetovector(image_path=None, input_string=None, path_to_npy=None, name=Non
 
     # Load the SVG file
     paths, attributes = svg2paths('image.svg')
-    print("paths", len(paths))
+    #print("paths", len(paths))
     #new_paths = [approximate_curve_with_lines(path) for path in paths]
     #print("new paths", len(new_paths))
     for path in vector.paths:
@@ -87,7 +97,8 @@ def tracetovector(image_path=None, input_string=None, path_to_npy=None, name=Non
     # Iterate through each path
 
 
-
+    total_points = sum(len(extract_control_points(spline)) for path in vector.paths for spline in path.splines)
+    target_points = 1199  # Adjust as needed, just below 1200
 
 
 
@@ -98,18 +109,20 @@ def tracetovector(image_path=None, input_string=None, path_to_npy=None, name=Non
         stroke = {'x': [], 'y': []}
         for spline in path.splines:  # Assuming each Path object has a 'splines' attribute
             control_points = extract_control_points(spline)
-            num_segments = 5 * (len(control_points) - 1)  # 5 line segments between each control point
-            approx_points = approximate_cubic_spline_with_lines(control_points, num_segments)
+            #num_segments = 5 * (len(control_points) - 1)  # 5 line segments between each control point
+            approx_points = approximate_cubic_spline_with_dynamic_reduction(control_points, total_points, target_points)
             for x, y in approx_points:
-                stroke['x'].append(x)
-                stroke['y'].append(-y)  # Negating y if needed, as per your original code
+                stroke['x'].append(int(x))
+                stroke['y'].append(int(-y))  # Negating y if needed, as per your original code
         all_strokes.append(stroke)
+
 
 
 
     # Print the number of elements (strokes) in the JSON
     print("Number of strokes:", len(all_strokes))
     # Convert the all_strokes data to JSON format
+    #all_strokes.pop()
     json_data = json.dumps(all_strokes)
     print(json_data)
     #print(type(json_data))
