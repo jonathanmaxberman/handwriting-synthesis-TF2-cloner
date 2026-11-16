@@ -10,47 +10,84 @@ Implementation of the handwriting synthesis experiments in the paper <a href="ht
 Generating Sequences with Recurrent Neural Networks</a> by Alex Graves. The implementation closely follows the original
 paper, with a few slight deviations, and the generated samples are of similar quality to those presented in the paper.
 
-## Installation
+## Live demo
 
-Needs Python 3.10-3.12 (3.12 is what this was last verified on, with TensorFlow 2.21).
+**https://jonathanmaxberman.github.io/handwriting-synthesis-TF2-cloner/**
 
-```shell
-git clone https://github.com/jonathanmaxberman/handwriting-synthesis-TF2-cloner
-cd handwriting-synthesis-TF2-cloner
-python3.12 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+The demo is a static page (the `docs/` folder, served by GitHub Pages). There is no server: the
+model runs in the visitor's own browser, as Python compiled to WebAssembly (Pyodide), so text and
+handwriting samples never leave their device and a captured style is gone when the tab closes.
+It is a demonstration for informational purposes.
 
-## Web app (with handwriting cloning)
+On the page you can:
 
-```shell
-python app.py
-```
+- type text and have it written in any of the 13 built-in styles;
+- **draw** a few words, type what you wrote, and have the model write in your handwriting. The
+  model then tests itself in that style and reports whether its writing is legible.
 
-Then open http://127.0.0.1:5001. From the page you can:
+Expect a download of about 25 MB on first use, and roughly 10 seconds to write a couple of lines
+on a laptop (the quality test of a new style takes about 25 seconds).
 
-- type text and have it written in any of the saved styles;
-- **draw** a few words in the box, type what you wrote as the priming sequence, and press
-  "Capture Strokes" to save your own handwriting as a new style;
-- **upload an image** of handwriting (one line of a few words, cropped close; a phone photo is
-  fine), type the words it contains, and press "Trace Image".
+### Cloning a style from a photo: included, switched off
 
-Both report a quality check: the model is primed with the new style, asked to write a few test
-lines, and then scored on whether what it wrote is legible (see `style_quality.py`). "good" is
-about 0.3 and up; real pen recordings score 0.4-0.6.
+The code can also pick up a style from a *photo* of handwriting (`hwlite/trace.py`). On the public
+page that interface is deliberately switched off, as a small barrier against casual misuse such as
+forged homework, notes or prescriptions. It is a speed bump, not a lock. To study it, run your own
+copy and flip the switch:
 
-The same image tracing is available from the command line:
+1. in `docs/config.js` set `ENABLE_IMAGE_CLONING: true`;
+2. serve the folder locally: `python -m http.server --directory docs 8000` and open
+   http://localhost:8000.
+
+The first use downloads about 45 MB of extra image tools, and tracing takes a few minutes in the
+browser because five reconstructions are each tested. From the command line it takes about ten
+seconds:
 
 ```shell
 python handlePNG.py sample.png "the words in the image" 17
 ```
 
+Use only handwriting that is yours or that you have permission to use.
+
+## Installation (for running the code yourself)
+
+Python 3.10+. The model runs in plain NumPy, so TensorFlow is **not** needed unless you want to
+retrain it.
+
+```shell
+git clone https://github.com/jonathanmaxberman/handwriting-synthesis-TF2-cloner
+cd handwriting-synthesis-TF2-cloner
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+```python
+from hwlite import Writer
+
+writer = Writer.from_files('docs/model/weights.npz', 'docs/model/styles.npz')
+svg, strokes = writer.write(["Hello there", "this is a test"], style="7", bias=0.85)
+open('hello.svg', 'w').write(svg)
+```
+
+### Layout
+
+| Path | What it is |
+|---|---|
+| `hwlite/` | The model and everything around it in NumPy: `model.py` (the network), `strokes.py` (stroke format), `writer.py` (text to SVG), `trace.py` (image to strokes), `quality.py` (legibility test) |
+| `docs/` | The demo site. `docs/py/hwlite` is a copy of `hwlite/` made by `build_site.py`; `docs/model/` holds the weights and built-in styles |
+| `handwriting_synthesis/` | The original TensorFlow implementation, kept for training (`pip install -r requirements-train.txt`) |
+| `export_weights.py` | Converts a TensorFlow checkpoint to `docs/model/weights.npz` |
+| `make_demo_images.py` | Regenerates the example images on the demo page |
+
+`hwlite` was checked against the TensorFlow model: the likelihood it assigns to a handwriting
+sample agrees to five decimal places.
+
 ### How an image becomes a style
 
 The model is primed with *online* handwriting: pen positions in the order they were written,
 sampled at a tablet's rate, with pen lifts marked. An image has none of that, so
-`image_to_style.py` reconstructs it:
+`hwlite/trace.py` reconstructs it:
 
 1. clean the image (transparency, light-on-dark, uneven lighting, automatic threshold, specks);
 2. thin the ink to its centerline and turn it into a graph of lines and junctions;
@@ -60,9 +97,9 @@ sampled at a tablet's rate, with pen lifts marked. An image has none of that, so
 5. resample with a human-like speed profile (slower in curves and at stroke ends), which matters
    a lot: the model treats evenly spaced points as unnatural;
 6. try a few reconstructions (more or less doubling back, faster or slower pen) and keep the one
-   the model writes most legibly from.
+   the model writes most legibly from (`hwlite/quality.py`).
 
-Measured by rendering the 13 shipped styles to images and tracing them back: 12 of 13 gave a
+Measured by rendering the 13 built-in styles to images and tracing them back: 12 of 13 gave a
 usable style from clean images and 9 of 13 from simulated phone photos. Those are synthetic
 images, not real scans. Very loopy cursive is the known weak spot.
 
@@ -70,13 +107,13 @@ images, not real scans. Very loopy cursive is the known weak spot.
 
 This imitates the general look of a handwriting; it does not reproduce signatures and is not a
 forgery tool. Only clone handwriting that is yours or that you have permission to use, and do
-not present generated writing as having been written by someone else.
+not present generated writing as having been written by someone else. The trained network comes
+from the IAM On-Line Handwriting Database, which is provided for non-commercial research.
 
-The demo script still works too:
+## Original TensorFlow version
 
-```shell
-python main.py
-```
+Everything below describes the upstream TensorFlow code in `handwriting_synthesis/`, which still
+works (`pip install -r requirements-train.txt`, then `python main.py`).
 
 ## Usage
 

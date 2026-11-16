@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Handwriting Synthesis Demo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+<header>
+  <h1>Handwriting synthesis</h1>
+  <p class="lede">A neural network that writes text in handwriting, and can pick up a handwriting style from a short sample.</p>
+</header>
+
+<section class="notice" aria-label="About this demo">
+  <p><strong>This is a demonstration, for informational purposes.</strong> It shows what a small, decade-old
+  research model (Graves, 2013) can do. It is not a product, comes with no guarantees, and must not be used to
+  pass writing off as someone else's.</p>
+  <p><strong>Everything runs in your browser.</strong> There is no server behind this page: your text, and any
+  handwriting sample you give it, never leave your device, and a captured style is forgotten when you close or
+  reload the tab.</p>
+</section>
+
+<section id="loader">
+  <h2>Start the demo</h2>
+  <p>Starting downloads the Python runtime and the model into this tab: <strong>about 25 MB</strong>, once, then
+  cached by your browser. After that, writing takes roughly <strong>10 seconds for a couple of lines</strong>
+  on a recent laptop, and several times longer on a phone or an older machine, because the network runs on your own processor.</p>
+  <button id="start" class="primary">Download and start (about 25 MB)</button>
+  <p id="load-status" class="status" role="status"></p>
+</section>
+
+<div id="app" hidden>
+<section>
+  <h2>1. Write something</h2>
+  <label for="text">Text to write (at most 75 characters per line; wrap a whole line in **two asterisks** for bold)</label>
+  <textarea id="text" rows="5">The quick brown fox jumps
+over the lazy dog</textarea>
+  <div class="row">
+    <label>Style
+      <select id="style"></select>
+    </label>
+    <label>Neatness <span id="bias-value">0.85</span>
+      <input type="range" id="bias" min="0" max="1.5" step="0.05" value="0.85">
+    </label>
+    <label>Ink
+      <select id="color"><option>black</option><option>blue</option><option>red</option><option>green</option></select>
+    </label>
+    <label>Align
+      <select id="justify"><option value="left">left</option><option value="center">center</option><option value="right">right</option></select>
+    </label>
+  </div>
+  <p class="hint">Neatness trades variety for legibility: low values are loose and sometimes illegible, high values are tidy and uniform.</p>
+  <button id="generate" class="primary">Write it</button>
+  <div class="progress" id="generate-progress" hidden><div></div></div>
+  <p id="generate-status" class="status" role="status"></p>
+  <div id="output" class="paper" hidden></div>
+  <p><a id="download" hidden download="handwriting.svg">Download as SVG</a></p>
+</section>
+
+<section>
+  <h2>2. Use your own handwriting</h2>
+  <p>Write a few words in the box with a mouse, finger or stylus, type exactly what you wrote, and press
+  <em>Use my handwriting</em>. The model reads the sample, then tests itself by writing three short lines in
+  that style and checking they are legible; that test takes about 25 seconds on a laptop. Your style
+  then appears as <em>mine</em> in the style list above.</p>
+  <canvas id="pad" width="1000" height="220" aria-label="Handwriting sample box"></canvas>
+  <div class="row">
+    <label class="grow">What you wrote
+      <input type="text" id="sample-text" placeholder="for example: a quiet morning walk">
+    </label>
+    <button id="clear">Clear</button>
+    <button id="capture" class="primary">Use my handwriting</button>
+  </div>
+  <div class="progress" id="capture-progress" hidden><div></div></div>
+  <p id="capture-status" class="status" role="status"></p>
+  <div id="capture-sample" class="sample" hidden></div>
+</section>
+</div>
+
+<section id="photo">
+  <h2>3. Styles from a photo of handwriting</h2>
+  <p>The same model can also pick up a style from a <em>photograph</em> of handwriting: the image is cleaned,
+  the ink is thinned to its centerline, and the order and speed of the pen strokes are reconstructed so the
+  model can read it as if it had been written on a tablet. The example below shows it working.</p>
+  <p><strong>That interface is deliberately left off this page.</strong> Copying a handwriting from a photo,
+  without the writer taking part, is the capability most open to misuse, and leaving it out is a small,
+  intentional barrier against casual forgery of things like homework, sick notes and prescriptions. It is a
+  speed bump, not a lock: the code is in the
+  <a href="https://github.com/jonathanmaxberman/handwriting-synthesis-TF2-cloner">public repository</a>, and a
+  researcher can switch the interface on in their own copy by changing one setting
+  (<code>ENABLE_IMAGE_CLONING</code> in <code>docs/config.js</code>). If you do, use only handwriting that is
+  yours or that you have permission to use.</p>
+  <div id="photo-ui" hidden>
+    <p class="hint">Image cloning is switched on in this copy. One line of a few words, cropped close to the
+    writing. The first use downloads about 45 MB of image tools; tracing then tries five reconstructions and
+    tests each, which takes about three minutes on a laptop.</p>
+    <div class="row">
+      <input type="file" id="photo-file" accept="image/*">
+      <label class="grow">What the image says
+        <input type="text" id="photo-text">
+      </label>
+      <button id="photo-go" class="primary">Use this image</button>
+    </div>
+    <div class="progress" id="photo-progress" hidden><div></div></div>
+    <p id="photo-status" class="status" role="status"></p>
+    <div id="photo-sample" class="sample" hidden></div>
+  </div>
+</section>
+
+<section>
+  <h2>What each mode looks like</h2>
+  <figure>
+    <img src="img/mode-write.png" alt="The same sentence written by the model in four of its built-in styles" loading="lazy">
+    <figcaption><strong>Writing in a built-in style.</strong> The same sentence in four of the thirteen styles
+    that ship with the model.</figcaption>
+  </figure>
+  <figure>
+    <img src="img/mode-draw.png" alt="A pen-recorded handwriting sample and new text written by the model in that style" loading="lazy">
+    <figcaption><strong>Your own handwriting.</strong> Top: a pen-recorded sample, as the drawing box captures
+    it. Below: new text the model wrote in that style.</figcaption>
+  </figure>
+  <figure>
+    <img src="img/mode-photo.png" alt="A scan of handwriting, the pen strokes reconstructed from it, and new text written in that style" loading="lazy">
+    <figcaption><strong>From a photo (not available on this page).</strong> A scan of a 19th-century letter in
+    Abraham Lincoln's hand, the pen strokes reconstructed from it, and new text in that style. Loopy cursive
+    like this is the hardest case, and results vary from run to run: this is the most legible of four attempts. The result is recognisably similar, not a copy.</figcaption>
+  </figure>
+</section>
+
+<footer>
+  <p><strong>Limits.</strong> The model imitates the general look of a handwriting: slant, size, spacing, how
+  letters join. It does not reproduce signatures, and its output would not fool anyone comparing it closely
+  with the real thing. It only knows unaccented English letters, digits and basic punctuation.</p>
+  <p><strong>Credits.</strong> Model and method: Alex Graves,
+  <a href="https://arxiv.org/abs/1308.0850">Generating Sequences With Recurrent Neural Networks</a>.
+  Trained network from <a href="https://github.com/sjvasquez/handwriting-synthesis">sjvasquez/handwriting-synthesis</a>,
+  trained on the IAM On-Line Handwriting Database, which is provided for non-commercial research.
+  This page is non-commercial. <a href="https://github.com/jonathanmaxberman/handwriting-synthesis-TF2-cloner">Source code</a>.</p>
+</footer>
+</main>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

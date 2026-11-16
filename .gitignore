@@ -14,3 +14,4 @@ __pycache__
 static/handwriting_output.svg
 static/style-*-preview.png
 image.svg
+!docs/img/

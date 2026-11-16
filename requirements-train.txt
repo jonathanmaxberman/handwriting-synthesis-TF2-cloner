@@ -1,0 +1,9 @@
+# Only for the original TensorFlow code in handwriting_synthesis/ (training, main.py, export_weights.py).
+# Verified on Python 3.12 (macOS arm64) with the versions noted.
+-r requirements.txt
+tensorflow>=2.16          # 2.21.0
+tf_keras                  # 2.21.0 - Keras 2, needed for the tf.compat.v1 RNN cells (must match the tensorflow version)
+tensorflow-probability    # 0.25.0
+svgwrite
+pandas
+scikit-learn

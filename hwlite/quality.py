@@ -9,33 +9,21 @@ model scores about 0.
 """
 import numpy as np
 
-from handwriting_synthesis import drawing
-
 TEST_LINES = ["The quick brown fox", "over the lazy dog", "We will meet again"]
 GOOD, POOR = 0.30, 0.15
 
 
-def _nll(hand, strokes, text):
-    """Average negative log-likelihood per pen sample of strokes given text (teacher forced)."""
-    nn = hand.nn
-    chars = drawing.encode_ascii(text)
-    x, y = strokes[None, :-1], strokes[None, 1:]
-    return float(nn.session.run(nn.loss, {nn.x: x, nn.y: y, nn.x_len: [x.shape[1]],
-                                          nn.c: chars[None], nn.c_len: [len(chars)]}))
-
-
-def legibility(hand, style_strokes, style_text, bias=0.8):
+def legibility(model, style_strokes, style_text, bias=0.8, rng=None, progress=None):
     """Score a style (normalized stroke array + the text it shows); higher is better."""
     wrong = TEST_LINES[1:] + TEST_LINES[:1]
-    generated = hand._sample(TEST_LINES, biases=[bias] * len(TEST_LINES),
-                             styles=[(style_strokes, style_text)] * len(TEST_LINES))
+    generated = model.write(TEST_LINES, biases=[bias] * len(TEST_LINES),
+                            primes=[(style_strokes, style_text)] * len(TEST_LINES), rng=rng, progress=progress)
     scores = []
     for strokes, right_text, wrong_text in zip(generated, TEST_LINES, wrong):
         if len(strokes) < 20:
             scores.append(0.0)
             continue
-        strokes = strokes.astype(np.float32)
-        scores.append(_nll(hand, strokes, wrong_text) - _nll(hand, strokes, right_text))
+        scores.append(model.nll(strokes, wrong_text) - model.nll(strokes, right_text))
     return float(np.mean(scores))
 
 
@@ -45,23 +33,28 @@ def verdict(score):
     if score >= POOR:
         return "fair", "The model partly follows this style; results may be uneven. A different sample may work better."
     return "poor", ("The model could not write legibly from this sample. Try a different sample: a few clearly "
-                    "written words, with the priming text matching them exactly.")
+                    "written words, with the text matching them exactly.")
 
 
-def best_style_from_image(hand, image_path, text, threshold=None):
+def best_style_from_image(model, image, text, threshold=None, rng=None, progress=None):
     """Trace an image several ways and keep the reconstruction the model handles best.
 
     How far a pen doubles back along its own ink (print vs. cursive) and how
     fast the writer was cannot be read off an image, so a few plausible
     reconstructions are tried and scored. Returns (strokes, score, settings).
     """
-    from image_to_style import load_ink_mask, strokes_from_ink, strokes_to_offsets
+    from .trace import load_ink_mask, strokes_from_ink, strokes_to_offsets
 
-    ink = load_ink_mask(image_path, threshold)
+    ink = load_ink_mask(image, threshold)
+    plan = 6
+    done = [0]
 
     def candidate(retrace, density):
         strokes = strokes_to_offsets(strokes_from_ink(ink, text, density=density, retrace=retrace))
-        return strokes, legibility(hand, strokes, text)
+        score = legibility(model, strokes, text, rng=rng,
+                           progress=(lambda f: progress((done[0] + f) / plan)) if progress else None)
+        done[0] += 1
+        return strokes, score
 
     tried = {}
     for retrace in (0.5, 0.2, 0.0):
@@ -73,5 +66,6 @@ def best_style_from_image(hand, image_path, text, threshold=None):
     settings = max(tried, key=lambda k: tried[k][1])
     strokes = tried[settings][0]
     # the winning score is flattered by having been picked as the maximum; measure it again
-    score = legibility(hand, strokes, text)
+    score = legibility(model, strokes, text, rng=rng,
+                       progress=(lambda f: progress((done[0] + f) / plan)) if progress else None)
     return strokes, score, {'retrace': settings[0], 'density': settings[1]}
