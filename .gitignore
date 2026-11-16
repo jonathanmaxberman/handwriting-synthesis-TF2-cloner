@@ -10,4 +10,7 @@ predictions
 venv
 img
 __pycache__
-/_main.py
+/_main.py.venv
+static/handwriting_output.svg
+static/style-*-preview.png
+image.svg

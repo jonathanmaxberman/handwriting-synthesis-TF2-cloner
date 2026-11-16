@@ -12,15 +12,38 @@ paper, with a few slight deviations, and the generated samples are of similar qu
 
 ## Installation
 
+Needs Python 3.10-3.12 (3.12 is what this was last verified on, with TensorFlow 2.21).
+
 ```shell
-git clone https://github.com/otuva/handwriting-synthesis
-cd handwriting-synthesis
-python -m venv venv
-source venv/bin/activate
+git clone https://github.com/jonathanmaxberman/handwriting-synthesis-TF2-cloner
+cd handwriting-synthesis-TF2-cloner
+python3.12 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-You can then run the demo as follows
+## Web app (with handwriting cloning)
+
+```shell
+python app.py
+```
+
+Then open http://127.0.0.1:5001. From the page you can:
+
+- type text and have it written in any of the saved styles;
+- **draw** a few words in the box, type what you wrote as the priming sequence, and press
+  "Capture Strokes" to save your own handwriting as a new style;
+- **upload an image** of handwriting (dark writing on a light background, one line, cropped close),
+  type the words it contains, and press "Trace Image". The image is traced back into pen strokes
+  with autotrace's centerline mode. This is experimental; try a few samples.
+
+The same image tracing is available from the command line:
+
+```shell
+python handlePNG.py sample.png "the words in the image" 17
+```
+
+The demo script still works too:
 
 ```shell
 python main.py

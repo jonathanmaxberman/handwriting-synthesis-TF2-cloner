@@ -31,7 +31,6 @@ def _draw(strokes, lines, filename, stroke_colors=None, stroke_widths=None, left
         strokes[:, 1] *= -1
         strokes[:, :2] -= strokes[:, :2].min() + initial_coord
         strokes[:, 0] += (view_width - strokes[:, 0].max()) / 2
-        print("left",left_justify)
         # Apply left justification adjustment
         left_margin = 10  # You can adjust this value as needed
         right_margin = 10

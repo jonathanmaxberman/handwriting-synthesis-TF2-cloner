@@ -1,64 +1,56 @@
-
-#from io import RawIOBase
 import numpy as np
-#import drawing
-#import json
-from handwriting_synthesis.drawing.operations import align, denoise, coords_to_offsets, normalize
-from ViewStrokeNPY import plot_stroke
 
-def handle_draw_data(data, priming_sequence, path, name):
-    # Decode the JSON data
-    #draw_data = json.loads(data)
-    print(data)
-    print("Hello!")
+from handwriting_synthesis.drawing.operations import align, denoise, coords_to_offsets, normalize
+
+# The model's priming buffer (Hand._sample) holds at most this many stroke points.
+MAX_PRIME_POINTS = 1200
+
+
+def handle_draw_data(data, priming_sequence, path, name, preview=None):
+    """Turn captured strokes into a priming style.
+
+    data: list of {"x": [...], "y": [...]} strokes (y grows downward, as on a canvas).
+    Saves {path}{name}strokes.npy and {path}{name}chars.npy, and returns the
+    normalized stroke array. If preview is a filename, a plot of the result is
+    saved there.
+    """
     all_strokes = []
     for stroke_data in data:
         x = np.array(stroke_data["x"], dtype=np.float32)
         y = np.array(stroke_data["y"], dtype=np.float32)
+        if len(x) == 0:
+            continue
 
-        # Create a 'pen state' array, defaulting to 0 (pen down)
+        # pen state: 0 = pen down, 1 = pen lifted after this point
         pen_state = np.zeros_like(x, dtype=np.float32)
-
-        # Set the last point of each stroke to 1 (pen up)
         pen_state[-1] = 1
 
-        # Combine x, y, and pen state into a single array
-        stroke = np.column_stack((x, y, pen_state))
-        all_strokes.extend(stroke.tolist())
+        all_strokes.extend(np.column_stack((x, y, pen_state)).tolist())
 
+    if len(all_strokes) < 2:
+        raise ValueError("No strokes to process.")
     strokes = np.array(all_strokes, dtype=np.float32)
 
-
-
-    #print(strokes)
     canvas_height = 200
     strokes[:, 1] = canvas_height - strokes[:, 1]
 
-    # Process the strokes data
     strokes = align(strokes)
     strokes = denoise(strokes)
     offsets = coords_to_offsets(strokes)
-    normalized_strokes = normalize(offsets)
-
-    # Convert back to float32 and save the normalized strokes data as a .npy file
-    normalized_strokes = normalized_strokes.astype(np.float32)
-    plot_stroke(normalized_strokes)
-
-    print("Shape of the strokes array:", normalized_strokes.shape)
+    normalized_strokes = normalize(offsets).astype(np.float32)
     normalized_strokes = normalized_strokes[:-1]
-    print("Poppedshape:", normalized_strokes.shape)
-    #np.save('./model/style/style-16-strokes.npy', normalized_strokes)
+
+    if len(normalized_strokes) > MAX_PRIME_POINTS:
+        raise ValueError(
+            f"Sample has {len(normalized_strokes)} points; the model can be primed with at most "
+            f"{MAX_PRIME_POINTS}. Use a shorter sample (a few words)."
+        )
+
     np.save(f'{path}{name}strokes.npy', normalized_strokes)
-    print("Processed strokes data saved.")
+    np.save(f'{path}{name}chars.npy', priming_sequence.encode('utf-8'))
 
-    # Handle the priming sequence
-    #print(text.value.encode('utf-8'))
-    priming_sequence_bytes = priming_sequence.encode('utf-8')
-    np.save(f'{path}{name}chars.npy', priming_sequence_bytes)
-    print("Priming sequence saved.")
+    if preview:
+        from ViewStrokeNPY import plot_stroke
+        plot_stroke(normalized_strokes, save_name=preview)
 
-    #view the plot
-    #plot_stroke(normalized_strokes)
-    # Download the files
-    #files.download('style-14-strokes.npy')
-    #files.download('style-14-chars.npy')
+    return normalized_strokes

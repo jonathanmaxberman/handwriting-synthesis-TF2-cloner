@@ -418,7 +418,7 @@ class BaseModel(object):
         logging.info(pp.pformat([(var.name, shape(var)) for var in tfcompat.trainable_variables()]))
 
         logging.info('Trainable parameter count:')
-        logging.info(str(np.sum(np.prod(shape(var)) for var in tfcompat.trainable_variables())))
+        logging.info(str(sum(np.prod(shape(var)) for var in tfcompat.trainable_variables())))
 
     def get_optimizer(self, learning_rate, beta1_decay):
         if self.optimizer == 'adam':

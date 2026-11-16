@@ -1,11 +1,19 @@
-Markdown~=3.5.1
-flask~=3.0.0
-beautifulsoup4~=4.12.2
-numpy
-scipy~=1.11.4
-matplotlib~=3.8.2
-tensorflow~=2.13.0
-svgwrite~=1.4.3
-pandas~=2.1.4
-scikit-learn~=1.3.2
-tensorflow-probability~=0.20.0
+# Verified working on Python 3.12 (macOS arm64) with the versions noted.
+tensorflow>=2.16          # 2.21.0
+tf_keras                  # 2.21.0 - Keras 2, needed for the tf.compat.v1 RNN cells (must match the tensorflow version)
+tensorflow-probability    # 0.25.0
+numpy                     # 2.5.5
+scipy
+matplotlib
+svgwrite
+pandas
+scikit-learn
+
+# web app
+flask>=3.0
+Markdown
+beautifulsoup4
+
+# tracing images of handwriting into styles
+pyautotrace               # 0.0.8 (imports as `autotrace`)
+pillow
