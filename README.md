@@ -33,15 +33,44 @@ Then open http://127.0.0.1:5001. From the page you can:
 - type text and have it written in any of the saved styles;
 - **draw** a few words in the box, type what you wrote as the priming sequence, and press
   "Capture Strokes" to save your own handwriting as a new style;
-- **upload an image** of handwriting (dark writing on a light background, one line, cropped close),
-  type the words it contains, and press "Trace Image". The image is traced back into pen strokes
-  with autotrace's centerline mode. This is experimental; try a few samples.
+- **upload an image** of handwriting (one line of a few words, cropped close; a phone photo is
+  fine), type the words it contains, and press "Trace Image".
+
+Both report a quality check: the model is primed with the new style, asked to write a few test
+lines, and then scored on whether what it wrote is legible (see `style_quality.py`). "good" is
+about 0.3 and up; real pen recordings score 0.4-0.6.
 
 The same image tracing is available from the command line:
 
 ```shell
 python handlePNG.py sample.png "the words in the image" 17
 ```
+
+### How an image becomes a style
+
+The model is primed with *online* handwriting: pen positions in the order they were written,
+sampled at a tablet's rate, with pen lifts marked. An image has none of that, so
+`image_to_style.py` reconstructs it:
+
+1. clean the image (transparency, light-on-dark, uneven lighting, automatic threshold, specks);
+2. thin the ink to its centerline and turn it into a graph of lines and junctions;
+3. walk each connected piece of ink the way a pen would: straight on through crossings, doubling
+   back along the ink where a hand does;
+4. order the strokes (words left to right, dots and crosses after their word);
+5. resample with a human-like speed profile (slower in curves and at stroke ends), which matters
+   a lot: the model treats evenly spaced points as unnatural;
+6. try a few reconstructions (more or less doubling back, faster or slower pen) and keep the one
+   the model writes most legibly from.
+
+Measured by rendering the 13 shipped styles to images and tracing them back: 12 of 13 gave a
+usable style from clean images and 9 of 13 from simulated phone photos. Those are synthetic
+images, not real scans. Very loopy cursive is the known weak spot.
+
+### Responsible use
+
+This imitates the general look of a handwriting; it does not reproduce signatures and is not a
+forgery tool. Only clone handwriting that is yours or that you have permission to use, and do
+not present generated writing as having been written by someone else.
 
 The demo script still works too:
 

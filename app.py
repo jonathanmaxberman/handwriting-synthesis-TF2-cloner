@@ -83,19 +83,31 @@ def parse_style_number(value):
     return style
 
 
+def style_result(style, strokes, score):
+    """JSON describing a newly saved style, including how well the model can use it."""
+    from style_quality import verdict
+    rating, message = verdict(score)
+    return jsonify({'status': 'success', 'style': style, 'points': len(strokes), 'score': round(score, 2),
+                    'rating': rating, 'message': message,
+                    'preview': url_for('static', filename=f'style-{style}-preview.png') + f'?v={int(time.time())}'})
+
+
 @app.route('/capture_strokes', methods=['POST'])
 def capture_strokes():
     """Save strokes drawn in the browser as a priming style."""
     try:
+        from style_quality import legibility
+
         data = request.get_json()
         priming_sequence = (data.get('priming_sequence') or '').strip()
         if not priming_sequence:
             raise ValueError("Type the words you wrote into the priming sequence box.")
         style = parse_style_number(data.get('style', DEFAULT_CUSTOM_STYLE))
-        preview = f'static/style-{style}-preview.png'
-        strokes = handle_draw_data(data['strokes'], priming_sequence, STYLE_DIR, f"style-{style}-", preview=preview)
-        return jsonify({'status': 'success', 'style': style, 'points': len(strokes),
-                        'preview': url_for('static', filename=f'style-{style}-preview.png') + f'?v={int(time.time())}'})
+        strokes = handle_draw_data(data['strokes'], priming_sequence, STYLE_DIR, f"style-{style}-",
+                                   preview=f'static/style-{style}-preview.png')
+        with _hand_lock_for_sampling:
+            score = legibility(get_hand(), strokes, priming_sequence)
+        return style_result(style, strokes, score)
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 
@@ -104,7 +116,7 @@ def capture_strokes():
 def upload_image():
     """Trace an uploaded image of handwriting into a priming style."""
     try:
-        from autotracecenter import tracetovector
+        from image_to_style import tracetovector
 
         upload = request.files.get('image')
         if upload is None or not upload.filename:
@@ -113,19 +125,20 @@ def upload_image():
         if not priming_sequence:
             raise ValueError("Type the words written in the image into the priming sequence box.")
         style = parse_style_number(request.form.get('style', DEFAULT_CUSTOM_STYLE))
-        threshold = int(request.form.get('threshold', 150))
+        threshold = request.form.get('threshold', '').strip()
+        threshold = int(threshold) if threshold else None   # empty = find the ink automatically
 
         suffix = os.path.splitext(upload.filename)[1][:10]
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
             upload.save(tmp)
         try:
-            preview = f'static/style-{style}-preview.png'
-            strokes = tracetovector(tmp.name, priming_sequence, path_to_npy=STYLE_DIR, name=f"style-{style}-",
-                                    threshold=threshold, preview=preview)
+            with _hand_lock_for_sampling:
+                strokes, score = tracetovector(tmp.name, priming_sequence, path_to_npy=STYLE_DIR,
+                                               name=f"style-{style}-", threshold=threshold,
+                                               preview=f'static/style-{style}-preview.png', hand=get_hand())
         finally:
             os.unlink(tmp.name)
-        return jsonify({'status': 'success', 'style': style, 'points': len(strokes),
-                        'preview': url_for('static', filename=f'style-{style}-preview.png') + f'?v={int(time.time())}'})
+        return style_result(style, strokes, score)
     except Exception as e:
         return jsonify({'error': str(e)}), 400
 

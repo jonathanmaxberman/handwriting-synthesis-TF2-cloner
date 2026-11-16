@@ -2,14 +2,22 @@
 
 usage: python handlePNG.py IMAGE "text written in the image" STYLE_NUMBER
 """
+import os
 import sys
 
-from autotracecenter import tracetovector
+os.environ.setdefault("MPLBACKEND", "Agg")
 
 if __name__ == '__main__':
     if len(sys.argv) != 4:
         sys.exit(__doc__)
     image, text, style = sys.argv[1], sys.argv[2], int(sys.argv[3])
-    tracetovector(image, text, path_to_npy='./model/style/', name=f'style-{style}-',
-                  preview=f'static/style-{style}-preview.png')
+
+    from handwriting_synthesis import Hand
+    from image_to_style import tracetovector
+    from style_quality import verdict
+
+    _, score = tracetovector(image, text, path_to_npy='./model/style/', name=f'style-{style}-',
+                             preview=f'static/style-{style}-preview.png', hand=Hand())
+    rating, message = verdict(score)
     print(f"Saved style {style}; preview at static/style-{style}-preview.png")
+    print(f"Quality check: {rating} ({score:.2f}). {message}")

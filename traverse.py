@@ -1,6 +1,6 @@
 import os
 import re
-from autotracecenter import tracetovector
+from image_to_style import tracetovector
 def process_lines_txt(file_path):
     with open(file_path, 'r') as file:
         lines = file.readlines()

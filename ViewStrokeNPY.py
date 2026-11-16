@@ -15,11 +15,12 @@ def plot_stroke(stroke, save_name=None):
 
     f.set_size_inches(5.0 * size_x / size_y, 5.0)
 
-    cuts = np.where(stroke[:, 2] == 1)[0]
+    # each pen lift ends a stroke; the last stroke runs to the end of the array
+    cuts = list(np.where(stroke[:, 2] == 1)[0]) + [len(stroke) - 1]
     start = 0
 
     for cut_value in cuts:
-        ax.plot(x[start:cut_value], y[start:cut_value], "k-", linewidth=3)
+        ax.plot(x[start:cut_value + 1], y[start:cut_value + 1], "k-", linewidth=3)
         start = cut_value + 1
 
     ax.axis("off")

@@ -68,8 +68,11 @@ class Hand(object):
         chars_len = np.zeros([num_samples])
         if styles is not None:
             for i, (cs, style) in enumerate(zip(lines, styles)):
-                x_p = np.load(os.path.join(style_path, f"style-{style}-strokes.npy"))
-                c_p = np.load(os.path.join(style_path, f"style-{style}-chars.npy")).tobytes().decode('utf-8')
+                if isinstance(style, tuple):  # a style given directly as (strokes, text)
+                    x_p, c_p = style
+                else:
+                    x_p = np.load(os.path.join(style_path, f"style-{style}-strokes.npy"))
+                    c_p = np.load(os.path.join(style_path, f"style-{style}-chars.npy")).tobytes().decode('utf-8')
                 c_p = str(c_p) + " " + cs
                 c_p = drawing.encode_ascii(c_p)
                 c_p = np.array(c_p)

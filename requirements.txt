@@ -15,5 +15,6 @@ Markdown
 beautifulsoup4
 
 # tracing images of handwriting into styles
-pyautotrace               # 0.0.8 (imports as `autotrace`)
+scikit-image              # 0.26.0
+opencv-python-headless    # 5.0.0
 pillow

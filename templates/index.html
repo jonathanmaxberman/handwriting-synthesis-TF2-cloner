@@ -34,11 +34,13 @@
 
     <h4>&hellip;or upload an image of handwriting</h4>
     <p>
-        Dark writing on a light background, one line, cropped close to the words. This is experimental: the
-        image is traced back into pen strokes, and you may have to try a few samples to get a good result.
+        One line of a few words, cropped close to the writing; a phone photo is fine. The image is traced back
+        into pen strokes several ways and the version the model handles best is kept, which takes about
+        ten seconds. This is still a reconstruction: print and simple joined writing work best, very loopy
+        cursive often does not.
     </p>
     <input type="file" id="image_file" accept="image/*">
-    Threshold: <input type="number" id="threshold" value="150" min="1" max="254" style="width:5em">
+    Ink threshold: <input type="number" id="threshold" placeholder="auto" min="1" max="254" style="width:5em">
     <button type="button" id="uploadImage">Trace Image</button>
 
     <div class="status" id="capture_status"></div>
@@ -91,8 +93,9 @@
         $sigdiv.jSignature();
 
         function showResult(response) {
-            $("#capture_status").removeClass("error").text(
-                "Saved as style " + response.style + " (" + response.points + " stroke points).");
+            $("#capture_status").removeClass("error").toggleClass("error", response.rating === "poor").text(
+                "Saved as style " + response.style + ". Quality check: " + response.rating +
+                " (" + response.score + "). " + response.message);
             $("#capture_preview").attr("src", response.preview).show();
             var $select = $("#style_select");
             if ($select.find("option[value='" + response.style + "']").length === 0) {
@@ -114,6 +117,7 @@
                 $("#capture_status").addClass("error").text("Nothing has been drawn.");
                 return;
             }
+            $("#capture_status").removeClass("error").text("Saving and testing the sample...");
             $.ajax({
                 type: "POST",
                 url: "/capture_strokes",
@@ -134,6 +138,7 @@
                 $("#capture_status").addClass("error").text("Choose an image file.");
                 return;
             }
+            $("#capture_status").removeClass("error").text("Tracing and testing the sample...");
             var formData = new FormData();
             formData.append("image", file);
             formData.append("priming_sequence", $("#priming_sequence").val());
